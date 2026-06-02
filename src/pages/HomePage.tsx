@@ -35,16 +35,33 @@ export const HomePage: React.FC = () => {
   useEffect(() => {
     const unsubLive = subscribeToLiveMatches(setLiveMatches);
 
-    Promise.all([
-      getUpcomingMatches(),
-      getRecentMatches(),
-      getActiveTournaments(),
-    ]).then(([upcoming, recent, tours]) => {
+    useEffect(() => {
+  const unsubLive = subscribeToLiveMatches(setLiveMatches);
+
+  const loadData = async () => {
+    try {
+      const upcoming = await getUpcomingMatches();
+      console.log("UPCOMING:", upcoming);
       setUpcomingMatches(upcoming);
+
+      const recent = await getRecentMatches();
+      console.log("RECENT:", recent);
       setRecentMatches(recent);
+
+      const tours = await getActiveTournaments();
+      console.log("TOURS:", tours);
       setTournaments(tours);
+    } catch (err) {
+      console.error("HOME ERROR:", err);
+    } finally {
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }
+  };
+
+  loadData();
+
+  return () => unsubLive();
+}, []);
 
     return () => { unsubLive(); };
   }, []);
