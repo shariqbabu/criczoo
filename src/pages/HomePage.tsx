@@ -222,7 +222,8 @@ export const HomePage: React.FC = () => {
             {/* Feature Cards */}
             <section>
               <h2 className="text-xl font-bold text-white mb-5" style={{ fontFamily: 'Syne, sans-serif' }}>
-                Why CricArena?
+                Why CricZoo
+                ?
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
@@ -287,7 +288,7 @@ export const HomePage: React.FC = () => {
                     Ready to Host Your First Match?
                   </h2>
                   <p className="text-slate-400 mb-6">
-                    Join hundreds of scorers already using CricArena. Free to use, no credit card required.
+                    Join hundreds of scorers already using CricZoo. Free to use, no credit card required.
                   </p>
                   <Link
                     to="/login"
