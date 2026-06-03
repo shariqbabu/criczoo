@@ -87,66 +87,67 @@ const PlayersPage: React.FC = () => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    #
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Player
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Position
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Team
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Nationality
-                  </th>
+                  {['#', 'Player', 'Position', 'Team', 'Nationality'].map(
+                    (heading) => (
+                      <th
+                        key={heading}
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                      >
+                        {heading}
+                      </th>
+                    )
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((player: Player) => (
-                  <tr
-                    key={player.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {player.number ?? '-'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        to={`/players/${player.id}`}
-                        className="font-medium text-gray-900 hover:text-blue-600"
-                      >
-                        {player.name}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4">
-                      {player.position ? (
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
-                          {player.position}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 text-sm">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {player.teamId ? (
+                {filtered.map((player: Player) => {
+                  // Safely access optional teamId / teamName
+                  const teamId = player.teamId;
+                  const teamName = player.teamName;
+
+                  return (
+                    <tr
+                      key={player.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {player.number ?? '-'}
+                      </td>
+                      <td className="px-6 py-4">
                         <Link
-                          to={`/teams/${player.teamId}`}
-                          className="hover:text-blue-600"
+                          to={`/players/${player.id}`}
+                          className="font-medium text-gray-900 hover:text-blue-600"
                         >
-                          {player.teamName ?? `Team ${player.teamId}`}
+                          {player.name}
                         </Link>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {player.nationality ?? '-'}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4">
+                        {player.position ? (
+                          <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
+                            {player.position}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-sm">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {teamId !== undefined ? (
+                          <Link
+                            to={`/teams/${teamId}`}
+                            className="hover:text-blue-600"
+                          >
+                            {teamName ?? `Team ${teamId}`}
+                          </Link>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {player.nationality ?? '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
