@@ -15,14 +15,27 @@ export interface StandingsEntry {
   nrr?: number;
 }
 
+export interface HostTournament extends Tournament {
+  hostId?: string;
+  matchCount?: number;
+  teamCount?: number;
+}
+
 const API_BASE = '/api';
 
 const handleResponse = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
-    const message = await response.text().catch(() => 'Request failed');
+    const message = await response
+      .text()
+      .catch(() => 'Request failed');
     throw new Error(message || `HTTP error ${response.status}`);
   }
   return response.json() as Promise<T>;
+};
+
+export const getHostTournaments = async (): Promise<HostTournament[]> => {
+  const response = await fetch(`${API_BASE}/tournaments?mine=true`);
+  return handleResponse<HostTournament[]>(response);
 };
 
 export const tournamentService = {
@@ -30,6 +43,8 @@ export const tournamentService = {
     const response = await fetch(`${API_BASE}/tournaments`);
     return handleResponse<Tournament[]>(response);
   },
+
+  getHostTournaments,
 
   getTournament: async (id: string | number): Promise<Tournament> => {
     const response = await fetch(`${API_BASE}/tournaments/${id}`);
@@ -77,16 +92,12 @@ export const tournamentService = {
     return handleResponse<StandingsEntry[]>(response);
   },
 
-  /**
-   * Calculate standings from matches client-side if the API doesn't support it
-   */
   calculateStandingsFromMatches: (
     matches: Match[],
     teams: Array<{ id: string | number; name: string }>
   ): StandingsEntry[] => {
     const standingsMap = new Map<string | number, StandingsEntry>();
 
-    // Initialize entries for all teams
     teams.forEach((team) => {
       standingsMap.set(team.id, {
         teamId: team.id,
@@ -103,7 +114,6 @@ export const tournamentService = {
       });
     });
 
-    // Process completed matches
     matches
       .filter((m) => m.status === 'completed')
       .forEach((match) => {
@@ -118,7 +128,6 @@ export const tournamentService = {
 
         const home = standingsMap.get(match.homeTeamId);
         const away = standingsMap.get(match.awayTeamId);
-
         if (!home || !away) return;
 
         home.played += 1;
@@ -146,7 +155,6 @@ export const tournamentService = {
         home.goalDifference = home.goalsFor - home.goalsAgainst;
         away.goalDifference = away.goalsFor - away.goalsAgainst;
 
-        // Calculate NRR (useful for cricket)
         home.nrr = calcNRR(
           home.goalsFor,
           home.played,
