@@ -1,51 +1,79 @@
 import { useQuery } from '@tanstack/react-query';
 
-export interface Player {
+export interface Match {
   id: string | number;
-  name: string;
-  position?: string;
-  number?: number;
-  nationality?: string;
-  age?: number;
-  stats?: Record<string, number>;
+  homeTeam?: string;
+  homeTeamId?: string | number;
+  awayTeam?: string;
+  awayTeamId?: string | number;
+  homeScore?: number;
+  awayScore?: number;
+  date?: string;
+  status?: 'scheduled' | 'live' | 'completed' | 'cancelled';
+  tournamentId?: string | number;
+  venue?: string;
 }
 
-export interface Team {
+export interface Tournament {
   id: string | number;
   name: string;
-  logo?: string;
-  city?: string;
-  foundedYear?: number;
-  players?: Player[];
+  startDate?: string;
+  endDate?: string;
+  status?: 'upcoming' | 'active' | 'completed';
   description?: string;
-  wins?: number;
-  losses?: number;
-  draws?: number;
+  matches?: Match[];
 }
 
-const fetchTeams = async (): Promise<Team[]> => {
-  const response = await fetch('/api/teams');
-  if (!response.ok) throw new Error('Failed to fetch teams');
+const fetchMatches = async (): Promise<Match[]> => {
+  const response = await fetch('/api/matches');
+  if (!response.ok) throw new Error('Failed to fetch matches');
   return response.json();
 };
 
-const fetchTeam = async (id: string | number): Promise<Team | null> => {
-  const response = await fetch(`/api/teams/${id}`);
-  if (!response.ok) throw new Error('Failed to fetch team');
+const fetchMatch = async (id: string | number): Promise<Match> => {
+  const response = await fetch(`/api/matches/${id}`);
+  if (!response.ok) throw new Error('Failed to fetch match');
   return response.json();
 };
 
-export const useTeams = () => {
-  return useQuery<Team[]>({
-    queryKey: ['teams'],
-    queryFn: fetchTeams,
+const fetchTournaments = async (): Promise<Tournament[]> => {
+  const response = await fetch('/api/tournaments');
+  if (!response.ok) throw new Error('Failed to fetch tournaments');
+  return response.json();
+};
+
+const fetchTournament = async (id: string | number): Promise<Tournament> => {
+  const response = await fetch(`/api/tournaments/${id}`);
+  if (!response.ok) throw new Error('Failed to fetch tournament');
+  return response.json();
+};
+
+export const useMatches = () => {
+  return useQuery<Match[]>({
+    queryKey: ['matches'],
+    queryFn: fetchMatches,
   });
 };
 
-export const useTeam = (id: string | number | undefined) => {
-  return useQuery<Team | null>({
-    queryKey: ['team', id],
-    queryFn: () => fetchTeam(id!),
+export const useMatch = (id?: string | number) => {
+  return useQuery<Match>({
+    queryKey: ['match', id],
+    queryFn: () => fetchMatch(id!),
+    enabled: !!id,
+  });
+};
+
+export const useTournaments = () => {
+  return useQuery<Tournament[]>({
+    queryKey: ['tournaments'],
+    queryFn: fetchTournaments,
+  });
+};
+
+export const useTournament = (id?: string | number) => {
+  return useQuery<Tournament>({
+    queryKey: ['tournament', id],
+    queryFn: () => fetchTournament(id!),
     enabled: !!id,
   });
 };
