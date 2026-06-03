@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Layout } from '@/components/common/Layout';
+import Layout from '@/components/common/Layout';
 import { useMyTeams } from '@/hooks/useTeamPlayer';
 import { useAuth } from '@/contexts/AuthContext';
 import { playerService } from '@/services/playerService';
