@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { Layout } from '@/components/common/Layout';
+import { Layout } from '@/components/Layout';
 import { useMatch } from '@/hooks/useMatch';
 import { ArrowLeft } from 'lucide-react';
 
