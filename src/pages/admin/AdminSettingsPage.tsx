@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Layout } from '@/components/common/Layout';
+import Layout from '@/components/common/Layout';
 import { getDocById, updateDocById } from '@/lib/firestore';
 import { Settings, Save, AlertTriangle, Bell, Users, Activity } from 'lucide-react';
 import type { AppSettings } from '@/types';
