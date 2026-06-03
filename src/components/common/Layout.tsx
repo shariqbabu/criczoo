@@ -1,19 +1,18 @@
-import { Navbar } from '../Navbar';
-import { Footer } from '../Footer';
+import React from 'react';
 
 interface LayoutProps {
   children: React.ReactNode;
-  hideFooter?: boolean;
+  className?: string;
 }
 
-export function Layout({ children, hideFooter = false }: LayoutProps) {
+const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
-      <main className="flex-1">
+    <div className={`min-h-screen bg-gray-50 ${className}`}>
+      <main className="container mx-auto px-4 py-8">
         {children}
       </main>
-      {!hideFooter && <Footer />}
     </div>
   );
-}
+};
+
+export default Layout;
