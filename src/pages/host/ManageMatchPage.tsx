@@ -1,54 +1,221 @@
-import { Link } from 'react-router-dom';
-import { Layout } from '@/components/common/Layout';
-import { useTeams } from '@/hooks/useTeamPlayer';
-import { Plus, Users, Edit } from 'lucide-react';
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useMatch, Match } from '@/hooks/useMatch';
+import { useTeams, Team } from '@/hooks/useTeam';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { matchService } from '@/services/matchService';
 
-export default function ManageMatchPage() {
-  const { teams, loading } = useTeams({ myTeams: true });
+const ManageMatchPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const { data: match, isLoading: matchLoading } = useMatch(id);
+  const { data: teamsData, isLoading: teamsLoading } = useTeams();
+  const teams: Team[] = teamsData ?? [];
+
+  const [homeScore, setHomeScore] = useState<number>(
+    match?.homeScore ?? 0
+  );
+  const [awayScore, setAwayScore] = useState<number>(
+    match?.awayScore ?? 0
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  const updateScoreMutation = useMutation({
+    mutationFn: () =>
+      matchService.updateScore({
+        matchId: id!,
+        homeScore,
+        awayScore,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['match', id] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+    },
+    onError: (err: Error) => {
+      setError(err.message ?? 'Failed to update score');
+    },
+  });
+
+  if (matchLoading || teamsLoading) {
+    return (
+      <div className="p-6 flex justify-center items-center h-64">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!match) {
+    return (
+      <div className="p-6 text-center text-red-500">
+        <p>Match not found.</p>
+      </div>
+    );
+  }
 
   return (
-    <Layout>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold">My Matches</h1>
-          <Link to="/host/matches/create" className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-            <Plus className="w-4 h-4" /> Create Match
-          </Link>
+    <div className="p-6 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold mb-8">Manage Match</h1>
+
+      {/* Teams display */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="text-center flex-1">
+            <p className="font-semibold text-lg text-gray-900">
+              {match.homeTeam ?? 'Home Team'}
+            </p>
+          </div>
+          <div className="px-6 text-gray-400 font-bold">VS</div>
+          <div className="text-center flex-1">
+            <p className="font-semibold text-lg text-gray-900">
+              {match.awayTeam ?? 'Away Team'}
+            </p>
+          </div>
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {[1,2,3].map(i => <div key={i} className="shimmer h-32 rounded-xl" />)}
-          </div>
-        ) : teams.length === 0 ? (
-          <div className="text-center py-20">
-            <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground mb-4">No teams yet</p>
-            <Link to="/host/teams/create" className="text-primary hover:underline text-sm">Create your first team</Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {teams.map(team => (
-              <div key={team.id} className="bg-white rounded-xl border border-border p-5">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Users className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{team.name}</h3>
-                      <p className="text-xs text-muted-foreground">{team.playerCount || 0} players</p>
-                    </div>
-                  </div>
-                  <button className="p-1.5 hover:bg-muted rounded-md transition-colors">
-                    <Edit className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                </div>
-              </div>
-            ))}
+        {/* Team select (for reassignment) */}
+        {teams.length > 0 && (
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Home Team
+              </label>
+              <select
+                defaultValue={String(match.homeTeamId ?? '')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {teams.map((team: Team) => (
+                  <option key={team.id} value={String(team.id)}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Away Team
+              </label>
+              <select
+                defaultValue={String(match.awayTeamId ?? '')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {teams.map((team: Team) => (
+                  <option key={team.id} value={String(team.id)}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
       </div>
-    </Layout>
+
+      {/* Score updater */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-4">Update Score</h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="flex items-center justify-center gap-8">
+          <div className="text-center">
+            <p className="text-sm text-gray-500 mb-2">
+              {match.homeTeam ?? 'Home'}
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setHomeScore((s) => Math.max(0, s - 1))}
+                className="w-9 h-9 rounded-full bg-red-100 text-red-600 font-bold hover:bg-red-200"
+              >
+                -
+              </button>
+              <span className="text-4xl font-bold w-12 text-center">
+                {homeScore}
+              </span>
+              <button
+                onClick={() => setHomeScore((s) => s + 1)}
+                className="w-9 h-9 rounded-full bg-green-100 text-green-600 font-bold hover:bg-green-200"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <span className="text-2xl text-gray-300 font-bold">-</span>
+
+          <div className="text-center">
+            <p className="text-sm text-gray-500 mb-2">
+              {match.awayTeam ?? 'Away'}
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setAwayScore((s) => Math.max(0, s - 1))}
+                className="w-9 h-9 rounded-full bg-red-100 text-red-600 font-bold hover:bg-red-200"
+              >
+                -
+              </button>
+              <span className="text-4xl font-bold w-12 text-center">
+                {awayScore}
+              </span>
+              <button
+                onClick={() => setAwayScore((s) => s + 1)}
+                className="w-9 h-9 rounded-full bg-green-100 text-green-600 font-bold hover:bg-green-200"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex gap-3 justify-center">
+          <button
+            onClick={() => updateScoreMutation.mutate()}
+            disabled={updateScoreMutation.isPending}
+            className="bg-blue-600 text-white px-8 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {updateScoreMutation.isPending ? 'Saving...' : 'Save Score'}
+          </button>
+          <button
+            onClick={() => navigate(-1)}
+            className="border border-gray-300 text-gray-700 px-8 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+
+      {/* Match info */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold mb-4">Match Details</h2>
+        <dl className="grid grid-cols-2 gap-4 text-sm">
+          {match.date && (
+            <>
+              <dt className="text-gray-500">Date</dt>
+              <dd className="font-medium">
+                {new Date(match.date).toLocaleString()}
+              </dd>
+            </>
+          )}
+          {match.venue && (
+            <>
+              <dt className="text-gray-500">Venue</dt>
+              <dd className="font-medium">{match.venue}</dd>
+            </>
+          )}
+          {match.status && (
+            <>
+              <dt className="text-gray-500">Status</dt>
+              <dd className="font-medium capitalize">{match.status}</dd>
+            </>
+          )}
+        </dl>
+      </div>
+    </div>
   );
-}
+};
+
+export default ManageMatchPage;
