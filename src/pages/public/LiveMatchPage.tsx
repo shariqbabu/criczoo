@@ -1,4 +1,4 @@
-import { Layout } from '@/components/common/Layout';
+import Layout from '@/components/common/Layout';
 import { useMatches } from '@/hooks/useMatch';
 import { Link } from 'react-router-dom';
 import { Radio, Clock, Users } from 'lucide-react';
