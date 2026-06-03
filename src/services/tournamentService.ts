@@ -1,143 +1,174 @@
-import { where, orderBy, limit } from 'firebase/firestore';
-import {
-  createDoc,
-  updateDocById,
-  deleteDocById,
-  getDocById,
-  queryDocs,
-  listenToDoc,
-  Collections,
-} from '@/lib/firestore';
-import type { Tournament, PointsTable, PointsTableEntry } from '@/types';
+import { Tournament, Match } from '@/hooks/useMatch';
 import { calcNRR } from '@/utils';
 
-export async function getTournament(id: string): Promise<Tournament | null> {
-  return getDocById<Tournament>(Collections.TOURNAMENTS, id);
+export interface StandingsEntry {
+  teamId: string | number;
+  teamName: string;
+  played: number;
+  won: number;
+  lost: number;
+  drawn: number;
+  points: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  nrr?: number;
 }
 
-export async function getTournaments(pageSize = 20): Promise<Tournament[]> {
-  return queryDocs<Tournament>(Collections.TOURNAMENTS, [
-    where('isPublic', '==', true),
-    orderBy('startDate', 'desc'),
-    limit(pageSize),
-  ]);
-}
+const API_BASE = '/api';
 
-export async function getHostTournaments(hostId: string): Promise<Tournament[]> {
-  return queryDocs<Tournament>(Collections.TOURNAMENTS, [
-    where('hostId', '==', hostId),
-    orderBy('createdAt', 'desc'),
-  ]);
-}
-
-export async function createTournament(data: Omit<Tournament, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-  return createDoc(Collections.TOURNAMENTS, data);
-}
-
-export async function updateTournament(id: string, data: Partial<Tournament>): Promise<void> {
-  return updateDocById(Collections.TOURNAMENTS, id, data);
-}
-
-export async function deleteTournament(id: string): Promise<void> {
-  return deleteDocById(Collections.TOURNAMENTS, id);
-}
-
-// ============================================================
-// POINTS TABLE
-// ============================================================
-
-export async function getPointsTable(tournamentId: string): Promise<PointsTable | null> {
-  const results = await queryDocs<PointsTable>(Collections.POINTS_TABLES, [
-    where('tournamentId', '==', tournamentId),
-    limit(1),
-  ]);
-  return results[0] || null;
-}
-
-export async function initPointsTable(
-  tournamentId: string,
-  teamIds: { id: string; name: string; logo?: string }[],
-  groupName?: string
-): Promise<void> {
-  const entries: PointsTableEntry[] = teamIds.map((t) => ({
-    teamId: t.id,
-    teamName: t.name,
-    teamLogo: t.logo,
-    played: 0,
-    won: 0,
-    lost: 0,
-    tied: 0,
-    noResult: 0,
-    points: 0,
-    runsScored: 0,
-    runsConceded: 0,
-    oversFaced: 0,
-    oversBowled: 0,
-    nrr: 0,
-  }));
-
-  const existing = await getPointsTable(tournamentId);
-  if (!existing) {
-    await createDoc(Collections.POINTS_TABLES, { tournamentId, groupName, entries });
+const handleResponse = async <T>(response: Response): Promise<T> => {
+  if (!response.ok) {
+    const message = await response.text().catch(() => 'Request failed');
+    throw new Error(message || `HTTP error ${response.status}`);
   }
-}
+  return response.json() as Promise<T>;
+};
 
-export async function updatePointsTableAfterMatch(
-  tournamentId: string,
-  winnerTeamId: string | null,
-  teamAId: string,
-  teamBId: string,
-  teamAData: { runs: number; overs: number },
-  teamBData: { runs: number; overs: number },
-  resultType: 'win' | 'tie' | 'no_result'
-): Promise<void> {
-  const table = await getPointsTable(tournamentId);
-  if (!table) return;
+export const tournamentService = {
+  getAllTournaments: async (): Promise<Tournament[]> => {
+    const response = await fetch(`${API_BASE}/tournaments`);
+    return handleResponse<Tournament[]>(response);
+  },
 
-  const entries = [...table.entries];
+  getTournament: async (id: string | number): Promise<Tournament> => {
+    const response = await fetch(`${API_BASE}/tournaments/${id}`);
+    return handleResponse<Tournament>(response);
+  },
 
-  const updateEntry = (teamId: string, isWinner: boolean) => {
-    const idx = entries.findIndex((e) => e.teamId === teamId);
-    if (idx === -1) return;
-    const e = { ...entries[idx] };
-    e.played++;
-    if (resultType === 'win') {
-      if (isWinner) { e.won++; e.points += 2; }
-      else { e.lost++; }
-    } else if (resultType === 'tie') {
-      e.tied++; e.points += 1;
-    } else {
-      e.noResult++; e.points += 1;
+  createTournament: async (
+    payload: Partial<Tournament>
+  ): Promise<Tournament> => {
+    const response = await fetch(`${API_BASE}/tournaments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<Tournament>(response);
+  },
+
+  updateTournament: async (
+    id: string | number,
+    payload: Partial<Tournament>
+  ): Promise<Tournament> => {
+    const response = await fetch(`${API_BASE}/tournaments/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<Tournament>(response);
+  },
+
+  deleteTournament: async (id: string | number): Promise<void> => {
+    const response = await fetch(`${API_BASE}/tournaments/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to delete tournament ${id}`);
     }
+  },
 
-    if (teamId === teamAId) {
-      e.runsScored += teamAData.runs;
-      e.runsConceded += teamBData.runs;
-      e.oversFaced += teamAData.overs;
-      e.oversBowled += teamBData.overs;
-    } else {
-      e.runsScored += teamBData.runs;
-      e.runsConceded += teamAData.runs;
-      e.oversFaced += teamBData.overs;
-      e.oversBowled += teamAData.overs;
-    }
+  getStandings: async (
+    tournamentId: string | number
+  ): Promise<StandingsEntry[]> => {
+    const response = await fetch(
+      `${API_BASE}/tournaments/${tournamentId}/standings`
+    );
+    return handleResponse<StandingsEntry[]>(response);
+  },
 
-    e.nrr = calcNRR(e.runsScored, e.oversFaced, e.runsConceded, e.oversBowled);
-    entries[idx] = e;
-  };
+  /**
+   * Calculate standings from matches client-side if the API doesn't support it
+   */
+  calculateStandingsFromMatches: (
+    matches: Match[],
+    teams: Array<{ id: string | number; name: string }>
+  ): StandingsEntry[] => {
+    const standingsMap = new Map<string | number, StandingsEntry>();
 
-  updateEntry(teamAId, winnerTeamId === teamAId);
-  updateEntry(teamBId, winnerTeamId === teamBId);
+    // Initialize entries for all teams
+    teams.forEach((team) => {
+      standingsMap.set(team.id, {
+        teamId: team.id,
+        teamName: team.name,
+        played: 0,
+        won: 0,
+        lost: 0,
+        drawn: 0,
+        points: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        goalDifference: 0,
+        nrr: 0,
+      });
+    });
 
-  // Sort: points desc, then NRR desc
-  entries.sort((a, b) => b.points - a.points || b.nrr - a.nrr);
+    // Process completed matches
+    matches
+      .filter((m) => m.status === 'completed')
+      .forEach((match) => {
+        if (
+          match.homeTeamId === undefined ||
+          match.awayTeamId === undefined ||
+          match.homeScore === undefined ||
+          match.awayScore === undefined
+        ) {
+          return;
+        }
 
-  await updateDocById(Collections.POINTS_TABLES, table.id, { entries });
-}
+        const home = standingsMap.get(match.homeTeamId);
+        const away = standingsMap.get(match.awayTeamId);
 
-export function subscribeToTournament(
-  id: string,
-  callback: (t: Tournament | null) => void
-): () => void {
-  return listenToDoc<Tournament>(Collections.TOURNAMENTS, id, callback);
-}
+        if (!home || !away) return;
+
+        home.played += 1;
+        away.played += 1;
+        home.goalsFor += match.homeScore;
+        home.goalsAgainst += match.awayScore;
+        away.goalsFor += match.awayScore;
+        away.goalsAgainst += match.homeScore;
+
+        if (match.homeScore > match.awayScore) {
+          home.won += 1;
+          home.points += 3;
+          away.lost += 1;
+        } else if (match.homeScore < match.awayScore) {
+          away.won += 1;
+          away.points += 3;
+          home.lost += 1;
+        } else {
+          home.drawn += 1;
+          home.points += 1;
+          away.drawn += 1;
+          away.points += 1;
+        }
+
+        home.goalDifference = home.goalsFor - home.goalsAgainst;
+        away.goalDifference = away.goalsFor - away.goalsAgainst;
+
+        // Calculate NRR (useful for cricket)
+        home.nrr = calcNRR(
+          home.goalsFor,
+          home.played,
+          home.goalsAgainst,
+          home.played
+        );
+        away.nrr = calcNRR(
+          away.goalsFor,
+          away.played,
+          away.goalsAgainst,
+          away.played
+        );
+
+        standingsMap.set(match.homeTeamId, home);
+        standingsMap.set(match.awayTeamId, away);
+      });
+
+    return Array.from(standingsMap.values()).sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.goalDifference !== a.goalDifference)
+        return b.goalDifference - a.goalDifference;
+      return b.goalsFor - a.goalsFor;
+    });
+  },
+};
