@@ -5,6 +5,7 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ProtectedRoute, HostRoute, AdminRoute, PublicOnlyRoute } from '@/components/auth/RouteGuards';
 import { Suspense, lazy } from 'react';
 import { LoadingScreen } from '@/components/common/LoadingScreen';
+import { Layout } from '@/components/common/Layout';
 
 // Auth pages
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
