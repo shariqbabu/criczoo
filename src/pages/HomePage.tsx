@@ -33,9 +33,6 @@ export const HomePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubLive = subscribeToLiveMatches(setLiveMatches);
-
-    useEffect(() => {
   const unsubLive = subscribeToLiveMatches(setLiveMatches);
 
   const loadData = async () => {
@@ -60,11 +57,10 @@ export const HomePage: React.FC = () => {
 
   loadData();
 
-  return () => unsubLive();
+  return () => {
+    unsubLive();
+  };
 }, []);
-
-    return () => { unsubLive(); };
-  }, []);
 
   return (
     <div className="min-h-screen hero-bg">
