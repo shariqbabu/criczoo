@@ -1,20 +1,19 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import {
   Menu, X, User, LogOut, Settings, ChevronDown,
   Activity, Trophy, Users, Shield, Home, Radio
 } from 'lucide-react';
 
 export function Navbar() {
-  const { user, userProfile, logout } = useAuth();
+  const { profile, logOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   const handleLogout = async () => {
-    await logout();
+    await logOut();
     navigate('/login');
   };
 
@@ -64,7 +63,7 @@ export function Navbar() {
             {user ? (
               <>
                 {/* Host/Admin links */}
-                {(userProfile?.role === 'host' || userProfile?.role === 'admin') && (
+                {(Profile?.role === 'host' || Profile?.role === 'admin') && (
                   <Link
                     to="/host"
                     className="hidden md:flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
@@ -100,7 +99,7 @@ export function Navbar() {
                   {profileOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-border py-1 z-50">
                       <div className="px-3 py-2 border-b border-border">
-                        <p className="text-sm font-medium truncate">{userProfile?.displayName || 'User'}</p>
+                        <p className="text-sm font-medium truncate">{Profile?.displayName || 'User'}</p>
                         <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                       </div>
                       <Link
@@ -170,7 +169,7 @@ export function Navbar() {
             {user && (
               <>
                 <hr className="my-2" />
-                {(userProfile?.role === 'host' || userProfile?.role === 'admin') && (
+                {(Profile?.role === 'host' || Profile?.role === 'admin') && (
                   <Link to="/host" className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-primary" onClick={() => setMobileOpen(false)}>
                     <Shield className="w-4 h-4" /> Host Dashboard
                   </Link>
