@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Layout } from '@/components/common/Layout';
+import Layout from '@/components/common/Layout';
 import { useTeams } from '@/hooks/useTeamPlayer';
 import { Users, Search } from 'lucide-react';
 
