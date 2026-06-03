@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Layout } from '@/components/common/Layout';
+import Layout from '@/components/common/Layout';
 import { queryDocs, Collections } from '@/lib/firestore';
 import { orderBy, limit } from 'firebase/firestore';
 import { Activity, Search, Eye } from 'lucide-react';
