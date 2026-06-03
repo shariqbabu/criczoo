@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Layout } from '@/components/common/Layout';
+import Layout from '@/components/common/Layout';
 import { useTeams } from '@/hooks/useTeamPlayer';
 import { useTournaments } from '@/hooks/useMatch';
 import { matchService } from '@/services/matchService';
