@@ -1,76 +1,161 @@
+import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Layout } from '@/components/common/Layout';
-import { useTeam } from '@/hooks/useTeamPlayer';
-import { ArrowLeft, Users, User } from 'lucide-react';
+import { useTeam, Player } from '@/hooks/useTeam';
 
-export default function TeamDetailPage() {
-  const { teamId } = useParams<{ teamId: string }>();
-  const { team, players, loading } = useTeam(teamId!);
+const TeamDetailPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const { data: team, isLoading, error } = useTeam(id);
 
-  if (loading) return <Layout><div className="max-w-4xl mx-auto px-4 py-8"><div className="shimmer h-48 rounded-xl" /></div></Layout>;
-
-  if (!team) return (
-    <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <p className="text-muted-foreground">Team not found.</p>
-        <Link to="/teams" className="text-primary hover:underline text-sm mt-2 inline-block">Browse Teams</Link>
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center items-center h-64">
+          <p className="text-gray-500">Loading team...</p>
+        </div>
       </div>
-    </Layout>
-  );
+    );
+  }
+
+  if (error || !team) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-red-500 mb-4">Team not found.</p>
+          <Link
+            to="/teams"
+            className="text-blue-600 hover:underline"
+          >
+            Back to Teams
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <Layout>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Link to="/teams" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
-          <ArrowLeft className="w-4 h-4" /> All Teams
-        </Link>
+    <div className="container mx-auto px-4 py-8">
+      {/* Back link */}
+      <Link
+        to="/teams"
+        className="text-blue-600 hover:underline text-sm mb-6 inline-block"
+      >
+        ← Back to Teams
+      </Link>
 
-        {/* Team header */}
-        <div className="bg-white rounded-2xl border border-border p-8 mb-6 flex items-center gap-6">
-          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-            {team.logoUrl ? (
-              <img src={team.logoUrl} alt={team.name} className="w-16 h-16 rounded-xl object-cover" />
-            ) : (
-              <Users className="w-10 h-10 text-primary" />
-            )}
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">{team.name}</h1>
-            <p className="text-muted-foreground text-sm mt-1">{players.length} players</p>
-            {team.description && <p className="text-sm mt-2">{team.description}</p>}
-          </div>
-        </div>
-
-        {/* Players list */}
-        <div className="bg-white rounded-2xl border border-border p-6">
-          <h2 className="font-semibold mb-4">Squad</h2>
-          {players.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No players added yet.</p>
+      {/* Team Header */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="flex items-center gap-6">
+          {team.logo ? (
+            <img
+              src={team.logo}
+              alt={team.name}
+              className="w-24 h-24 object-contain"
+            />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {players.map(player => (
-                <Link
-                  key={player.id}
-                  to={`/players/${player.id}`}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    {player.photoUrl ? (
-                      <img src={player.photoUrl} alt={player.name} className="w-10 h-10 rounded-full object-cover" />
-                    ) : (
-                      <User className="w-5 h-5 text-primary" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">{player.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{player.role}</p>
-                  </div>
-                </Link>
-              ))}
+            <div className="w-24 h-24 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span className="text-blue-600 font-bold text-4xl">
+                {team.name.charAt(0)}
+              </span>
             </div>
           )}
+
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">{team.name}</h1>
+            {team.city && (
+              <p className="text-gray-500 mt-1">{team.city}</p>
+            )}
+            {team.foundedYear && (
+              <p className="text-gray-400 text-sm mt-1">
+                Founded: {team.foundedYear}
+              </p>
+            )}
+          </div>
         </div>
+
+        {team.description && (
+          <p className="mt-4 text-gray-600">{team.description}</p>
+        )}
       </div>
-    </Layout>
+
+      {/* Stats */}
+      {(team.wins !== undefined ||
+        team.losses !== undefined ||
+        team.draws !== undefined) && (
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <p className="text-2xl font-bold text-green-600">
+              {team.wins ?? 0}
+            </p>
+            <p className="text-sm text-gray-500">Wins</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <p className="text-2xl font-bold text-gray-600">
+              {team.draws ?? 0}
+            </p>
+            <p className="text-sm text-gray-500">Draws</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <p className="text-2xl font-bold text-red-600">
+              {team.losses ?? 0}
+            </p>
+            <p className="text-sm text-gray-500">Losses</p>
+          </div>
+        </div>
+      )}
+
+      {/* Players */}
+      {team.players && team.players.length > 0 && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-semibold">
+              Players ({team.players.length})
+            </h2>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {team.players.map((player: Player) => (
+              <div
+                key={player.id}
+                className="px-6 py-4 flex items-center justify-between hover:bg-gray-50"
+              >
+                <div className="flex items-center gap-4">
+                  {player.number !== undefined && (
+                    <span className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
+                      {player.number}
+                    </span>
+                  )}
+                  <div>
+                    <p className="font-medium text-gray-900">{player.name}</p>
+                    {player.nationality && (
+                      <p className="text-xs text-gray-400">
+                        {player.nationality}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6 text-sm text-gray-500">
+                  {player.position && (
+                    <span className="bg-gray-100 px-2 py-0.5 rounded text-xs">
+                      {player.position}
+                    </span>
+                  )}
+                  {player.age !== undefined && (
+                    <span>Age: {player.age}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(!team.players || team.players.length === 0) && (
+        <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+          No players registered for this team.
+        </div>
+      )}
+    </div>
   );
-}
+};
+
+export default TeamDetailPage;
