@@ -48,34 +48,60 @@ export interface Tournament {
   matches?: Match[];
 }
 
+export interface LeaderboardEntry {
+  rank: number;
+  teamId: string | number;
+  teamName: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+  form?: Array<'W' | 'D' | 'L'>;
+}
+
 const fetchMatches = async (): Promise<Match[]> => {
   const response = await fetch('/api/matches');
   if (!response.ok) throw new Error('Failed to fetch matches');
-  return response.json();
+  return response.json() as Promise<Match[]>;
 };
 
 const fetchLiveMatches = async (): Promise<Match[]> => {
   const response = await fetch('/api/matches?status=live');
   if (!response.ok) throw new Error('Failed to fetch live matches');
-  return response.json();
+  return response.json() as Promise<Match[]>;
 };
 
 const fetchMatch = async (id: string | number): Promise<Match> => {
   const response = await fetch(`/api/matches/${id}`);
   if (!response.ok) throw new Error('Failed to fetch match');
-  return response.json();
+  return response.json() as Promise<Match>;
 };
 
 const fetchTournaments = async (): Promise<Tournament[]> => {
   const response = await fetch('/api/tournaments');
   if (!response.ok) throw new Error('Failed to fetch tournaments');
-  return response.json();
+  return response.json() as Promise<Tournament[]>;
 };
 
 const fetchTournament = async (id: string | number): Promise<Tournament> => {
   const response = await fetch(`/api/tournaments/${id}`);
   if (!response.ok) throw new Error('Failed to fetch tournament');
-  return response.json();
+  return response.json() as Promise<Tournament>;
+};
+
+const fetchLeaderboard = async (
+  tournamentId?: string | number
+): Promise<LeaderboardEntry[]> => {
+  const url = tournamentId
+    ? `/api/leaderboard?tournamentId=${tournamentId}`
+    : '/api/leaderboard';
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to fetch leaderboard');
+  return response.json() as Promise<LeaderboardEntry[]>;
 };
 
 export const useMatches = () => {
@@ -89,7 +115,7 @@ export const useLiveMatches = () => {
   return useQuery<Match[]>({
     queryKey: ['matches', 'live'],
     queryFn: fetchLiveMatches,
-    refetchInterval: 30_000, // Poll every 30 seconds
+    refetchInterval: 30_000,
   });
 };
 
@@ -113,5 +139,12 @@ export const useTournament = (id?: string | number) => {
     queryKey: ['tournament', id],
     queryFn: () => fetchTournament(id!),
     enabled: !!id,
+  });
+};
+
+export const useLeaderboard = (tournamentId?: string | number) => {
+  return useQuery<LeaderboardEntry[]>({
+    queryKey: ['leaderboard', tournamentId],
+    queryFn: () => fetchLeaderboard(tournamentId),
   });
 };
