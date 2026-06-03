@@ -1,80 +1,146 @@
-import { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Layout } from '@/components/common/Layout';
-import { useAuth } from '@/contexts/AuthContext';
-import { getHostTournaments } from '@/services/tournamentService';
-import { Plus, Trophy, Calendar } from 'lucide-react';
-import type { Tournament } from '@/types';
+import { useQuery } from '@tanstack/react-query';
+import {
+  getHostTournaments,
+  HostTournament,
+} from '@/services/tournamentService';
+import { Trophy, PlusCircle } from 'lucide-react';
 
-export default function HostTournamentsPage() {
-  const { user } = useAuth();
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [loading, setLoading] = useState(true);
+const statusStyles: Record<string, string> = {
+  upcoming: 'bg-blue-100 text-blue-700',
+  active: 'bg-green-100 text-green-700',
+  completed: 'bg-gray-100 text-gray-500',
+};
 
-  useEffect(() => {
-    if (!user) return;
-    getHostTournaments(user.uid)
-      .then(setTournaments)
-      .finally(() => setLoading(false));
-  }, [user]);
+const HostTournamentsPage: React.FC = () => {
+  const [search, setSearch] = useState('');
 
-  const statusColor = (s: string) =>
-    s === 'ongoing' ? 'bg-green-100 text-green-700' :
-    s === 'completed' ? 'bg-gray-100 text-gray-600' :
-    'bg-blue-100 text-blue-700';
+  const { data, isLoading, error } = useQuery<HostTournament[]>({
+    queryKey: ['tournaments', 'mine'],
+    queryFn: getHostTournaments,
+  });
+
+  const tournaments: HostTournament[] = data ?? [];
+
+  const filtered = tournaments.filter((t) =>
+    t.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <Layout>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
+    <div className="p-6 max-w-5xl mx-auto">
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center gap-3">
+          <Trophy className="w-7 h-7 text-blue-600" />
           <h1 className="text-2xl font-bold">My Tournaments</h1>
-          <Link to="/host/tournaments/create"
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-            <Plus className="w-4 h-4" /> Create Tournament
+        </div>
+        <Link
+          to="/host/tournaments/create"
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+        >
+          <PlusCircle className="w-4 h-4" />
+          New Tournament
+        </Link>
+      </div>
+
+      {/* Search */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search tournaments..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-md border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {isLoading && (
+        <div className="flex justify-center items-center h-48">
+          <p className="text-gray-500">Loading tournaments...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="text-red-500 text-center py-8">
+          Failed to load tournaments.
+        </div>
+      )}
+
+      {!isLoading && !error && filtered.length === 0 && (
+        <div className="text-center py-16 bg-white rounded-lg shadow">
+          <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 mb-4">No tournaments found.</p>
+          <Link
+            to="/host/tournaments/create"
+            className="text-blue-600 hover:underline font-medium"
+          >
+            Create your first tournament →
           </Link>
         </div>
+      )}
 
-        {loading ? (
-          <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="shimmer h-24 rounded-xl" />)}</div>
-        ) : tournaments.length === 0 ? (
-          <div className="text-center py-20">
-            <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground mb-4">No tournaments yet</p>
-            <Link to="/host/tournaments/create" className="text-primary hover:underline text-sm">
-              Create your first tournament
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {tournaments.map(t => (
-              <div key={t.id} className="bg-white rounded-xl border border-border p-5 flex items-center justify-between hover:shadow-sm transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center">
-                    <Trophy className="w-5 h-5 text-yellow-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{t.name}</h3>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(t.status)}`}>
-                        {t.status}
-                      </span>
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(t.startDate).toLocaleDateString('en-IN')}
-                      </span>
-                      <span className="text-xs text-muted-foreground">{t.teams?.length ?? 0} teams</span>
-                    </div>
-                  </div>
-                </div>
-                <Link to={`/tournaments/${t.id}`}
-                  className="px-3 py-1.5 border border-border rounded-lg text-sm hover:bg-muted transition-colors">
-                  View
+      {filtered.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.map((t: HostTournament) => (
+            <div
+              key={t.id}
+              className="bg-white rounded-lg shadow p-5 hover:shadow-md transition-shadow"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <h2 className="font-semibold text-gray-900 text-lg">
+                  {t.name}
+                </h2>
+                {t.status && (
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
+                      statusStyles[t.status] ?? 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {t.status}
+                  </span>
+                )}
+              </div>
+
+              {t.description && (
+                <p className="text-sm text-gray-500 mb-3 line-clamp-2">
+                  {t.description}
+                </p>
+              )}
+
+              <div className="flex gap-4 text-xs text-gray-400 mb-4">
+                {t.startDate && (
+                  <span>
+                    Start: {new Date(t.startDate).toLocaleDateString()}
+                  </span>
+                )}
+                {t.matchCount !== undefined && (
+                  <span>{t.matchCount} matches</span>
+                )}
+                {t.teamCount !== undefined && (
+                  <span>{t.teamCount} teams</span>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Link
+                  to={`/host/tournaments/${t.id}`}
+                  className="flex-1 text-center text-sm border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Manage
+                </Link>
+                <Link
+                  to={`/tournaments/${t.id}`}
+                  className="flex-1 text-center text-sm border border-blue-300 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  View Public
                 </Link>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </Layout>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
-}
+};
+
+export default HostTournamentsPage;
