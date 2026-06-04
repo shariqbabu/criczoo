@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
+import { getTournaments, getHostTournaments } from '@/services/tournamentService';
+import type { Tournament } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getMatch,
@@ -154,4 +156,30 @@ export function useUpdateMatch(matchId: string) {
       queryClient.invalidateQueries({ queryKey: ['host-matches'] });
     },
   });
+}
+
+export function useTournaments() {
+  const query = useQuery({
+    queryKey: ['tournaments'],
+    queryFn: () => getTournaments(50),
+    staleTime: 120_000,
+  });
+  return {
+    tournaments: (query.data ?? []) as Tournament[],
+    loading: query.isLoading,
+    error: query.error,
+  };
+}
+
+export function useHostTournaments() {
+  const { user } = useAuth();
+  const query = useQuery({
+    queryKey: ['host-tournaments', user?.uid],
+    queryFn: () => getHostTournaments(user!.uid),
+    enabled: !!user,
+  });
+  return {
+    tournaments: (query.data ?? []) as Tournament[],
+    loading: query.isLoading,
+  };
 }
